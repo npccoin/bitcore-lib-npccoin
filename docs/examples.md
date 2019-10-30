@@ -111,3 +111,56 @@ var transaction = new bitcore.Transaction()
     .to('mtoKs9V381UAhUia3d7Vb9GNak8Qvmcsme', 20000)
     .sign(privateKeys);
 ```
+## Full Cycle Transaction
+```
+const fetch = require('node-fetch');
+const bitcore = require('bitcore-lib-npccoin');
+
+(async() => {
+  const blockbook_url = 'https://explorer.npccoin.com';
+  const wif = 'Tv3PDVqxn96ynfv9TCg8DhkCEc63sD6Xzh4nEiZHEA5pUvgu8cFY';
+
+  const privateKey = new bitcore.PrivateKey(wif);
+  const address = privateKey.toAddress().toString(); // NgRTohniJFS3awAHTgYEsVxaBNH2usCEky
+  console.log(address)
+  const resp = await fetch(`${blockbook_url}/api/v2/utxo/${address}`)
+  const utxos = await resp.json();
+  console.log(utxos);
+  const utxo = utxos[0]
+  const value = Number(utxo.value)
+  const fee = 3000;
+
+  var formattedUtxo = {
+    "txId" : utxo.txid,
+    "outputIndex" : utxo.vout,
+    "address" : address,
+    "script" : bitcore.Script.buildPublicKeyHashOut(address).toHex(),
+    "satoshis" : value
+  };
+  console.log(formattedUtxo)  
+
+  const destAddress = 'NduZrwZB9ztU8yvjCKFcD84iPJR7ir1Qsq';
+  const amount = 10000;
+
+  const transaction = new bitcore.Transaction()
+    .from(formattedUtxo)
+    .to(destAddress, amount) //payment
+    .to(address, value - (amount + fee)) //change
+    .sign(privateKey);
+
+  const rawTx = transaction.toString();
+  console.log(rawTx);
+
+  const rawResponse = await fetch(`${blockbook_url}/api/v2/sendtx/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    redirect: 'follow',
+    body: rawTx
+  });
+  const content = await rawResponse.json();
+
+  console.log(content); //TxId or error message
+})()
+```
