@@ -112,7 +112,7 @@ var transaction = new bitcore.Transaction()
     .sign(privateKeys);
 ```
 ## Full Cycle Transaction
-```
+```javascript
 const fetch = require('node-fetch');
 const bitcore = require('bitcore-lib-npccoin');
 
